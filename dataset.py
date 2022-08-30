@@ -14,14 +14,14 @@ def generate_img(save_fig=False):
     # feature_names = ["speed_x","speed_y","temperature","pressure","density","speed"]
     feature_num = 6
 
-    ids_map = np.load(BASE_URL + "home/map1.npy",allow_pickle=True)
-    feature_data = np.zeros((feature_num,30,20,210241))
+    ids_map = np.load(BASE_URL + "home/map0.npy",allow_pickle=True)
+    feature_data = np.zeros((feature_num,30,20,420769))
 
     for i in range(ids_map.shape[0]):
         for j in range(ids_map.shape[1]):
             # if(i == 15 and j == 10):
             #     print(ids_map[i,j])
-            turbine_data = np.load(BASE_URL + "input/input1/%d.npy"%ids_map[i,j],allow_pickle=True)
+            turbine_data = np.load(BASE_URL + "input/input0/%d.npy"%ids_map[i,j],allow_pickle=True)
             feature_data[:,i,j] = turbine_data.transpose()
 
     # if save_fig:
@@ -71,26 +71,29 @@ def get_dataset_seq(target_pos,seasons):
     return dataset
 
     
-def get_dataset_img(muti_output=False,target_pos=None):
+def get_dataset_img(target_pos,window_size,predict_steps,seasons,debug=False):
     # feature_data (feature_num,30,20,105120)
     feature_data = np.load(BASE_URL + "home/npy/result/img_data.npy")
+    if debug:
+        feature_data = feature_data[0:200]
     for i in range(feature_data.shape[0]-1):
         feature_data[i] = (feature_data[i] - feature_data[i].mean()) / feature_data[i].std() / 1e7
         feature_data[i] = feature_data[i] * 0
     dataset = []
-    for i in range(0,feature_data.shape[3]-13):
-        # if i == 0:
-        #     fig = plt.figure(1,(2,3),dpi=600)
-        #     plt.axis("off")
-        #     for j in range(feature_data.shape[0]):
-        #         plt.imshow(feature_data[j,:,:,i])
-        #         plt.savefig("./fig/heat_map/%d.jpg"%j,pad_inches=0.0,bbox_inches='tight')
-        #         plt.show()
-        if(muti_output):
-            data_item = [torch.from_numpy(feature_data[:,:,:,i:i+6]).to(dtype=torch.float),
-            torch.tensor(feature_data[-1,:,:,i+13]).to(dtype=torch.float)]
-        else:
-            data_item = [torch.from_numpy(feature_data[:,:,:,i:i+6]).to(dtype=torch.float),
-            torch.tensor([feature_data[-1,target_pos[0],target_pos[1],i+13]]).to(dtype=torch.float)]
-        dataset.append(data_item)
+
+    years = 2
+    time_steps = feature_data.shape[-1]
+    year_steps = time_steps // years
+    season_steps = year_steps // 4
+
+    for year in range(years):
+        year_start = int(year / years * year_steps)
+        year_end = year_start + year_steps
+        for season in seasons:
+            season_start = year_start + int(season / 4 * season_steps)
+            season_end = season_start + season_steps
+            for i in range(season_start,season_end-(window_size+predict_steps-1)):
+                data_item = [torch.from_numpy(feature_data[:,:,:,i:i+window_size]).to(dtype=torch.float),
+                torch.tensor([feature_data[-1,target_pos[0],target_pos[1],i+(window_size+predict_steps-1)]]).to(dtype=torch.float)]
+                dataset.append(data_item)
     return dataset

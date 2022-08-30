@@ -6,7 +6,7 @@ WTK_URL = "https://f9g6p4cbvi.execute-api.us-west-2.amazonaws.com/prod"
 MET_DIR="/home/tju/test3/local-data-dir/met_data/"
 #09-12 420769
 
-id_maps = np.load("./map1.npy")
+id_maps = np.load("./map0.npy")
 id_maps = np.unique(id_maps.flatten())
 
 for i,site_id in enumerate(id_maps):
@@ -14,7 +14,7 @@ for i,site_id in enumerate(id_maps):
     #     continue
     print(i)
     start = pandas.Timestamp('2009-01-01', tz='utc')
-    end = pandas.Timestamp('2011-01-01', tz='utc')
+    end = pandas.Timestamp('2013-01-01', tz='utc')
     utc = True
     attributes = ["wind_direction", "wind_speed", "temperature", "pressure", "density"]
     # met_data = get_nc_data_from_url(WTK_URL+"/met", str(site_id), start, end, attributes, utc=utc)
@@ -26,6 +26,6 @@ for i,site_id in enumerate(id_maps):
     result = np.zeros((met_data.shape[0],6))
     result[:,:3] = met_data[:,2:5]
     result[:,3],result[:,4],result[:,5] = speed_x,speed_y,met_data[:,1]
-    np.save("./data/1/%d.npy"%site_id,result)
+    np.save("../input/input0/%d.npy"%site_id,result)
 
 print()
