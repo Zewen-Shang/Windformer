@@ -89,7 +89,7 @@ for target_map in range(2):
                 lr = 1e-3
                 optimizer = torch.optim.Adam(model.parameters(),lr=lr,weight_decay=1e-3)
 
-                writer = SummaryWriter(comment="%s_%d_%d_%d"%(model_name,target_map,season,predict_steps))
+                writer = SummaryWriter("./tf_dir",comment="%s_%d_%d_%d"%(model_name,target_map,season,predict_steps))
 
                 for i in range(epoch):
                     if(i == 10):
