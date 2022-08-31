@@ -1,68 +1,6 @@
 import torch
 import torch.nn as nn
 
-#
-
-
-class Spatial_Attn(nn.Module):
-    def __init__(self, window_size, feature_num, img_shape, patch_shape, dim, head_num, drop_prob=0) -> None:
-        super().__init__()
-        self.window_size, self.feature_num = window_size, feature_num
-        self.img_shape, self.drive_num = img_shape, img_shape[0] // patch_shape[0] * \
-            img_shape[1] // patch_shape[1]
-        self.patch_shape = patch_shape
-
-        self.dim = dim
-        self.head_num = head_num
-        self.head_dim = dim // head_num
-        self.scale = self.head_dim ** (-0.5)
-
-        self.pos_embed = torch.rand(
-            (1, 1, self.drive_num, feature_num), device="cuda")
-
-        assert(type(self.head_dim) == int)
-
-        self.avgpool = nn.AvgPool2d(2, 2)
-
-        self.test = nn.Linear(feature_num, dim)
-
-        self.layernorm = nn.LayerNorm(self.feature_num)
-        self.qkv = nn.Linear(self.feature_num, 3*dim)
-        self.attn_drop = nn.Dropout(drop_prob)
-        self.proj = nn.Linear(dim, dim)
-        self.proj_drop = nn.Dropout(drop_prob)
-
-    def forward(self, input):
-        # input (batch_size,window_size,feature_num,img_height,img_weight)
-        batch_size = input.shape[0]
-
-        x = self.avgpool(input.reshape(batch_size * self.window_size,
-                         self.feature_num, self.img_shape[0], self.img_shape[1]))
-        # x (batch_size,window_size,feature_num,15 * 10)
-        x = x.reshape(batch_size, self.window_size,
-                      self.feature_num, self.drive_num)
-        # x (batch_size,window_size,15 * 10,feature_num)
-        x = x.permute(0, 1, 3, 2)
-
-        # x = self.test(x)
-
-        x = x + self.pos_embed.repeat((batch_size, self.window_size, 1, 1))
-
-        x = self.layernorm(x)
-        qkv = self.qkv(x).reshape(batch_size, self.window_size,
-                                  self.drive_num, 3, self.head_num, self.head_dim)
-        q, k, v = qkv.permute(3, 0, 1, 4, 2, 5)
-        attn = q @ k.transpose(-1, -2) * self.scale
-        attn = nn.functional.softmax(attn, dim=-1)
-        attn = self.attn_drop(attn)
-        x = (attn @ v).reshape(batch_size,
-                               self.window_size, self.drive_num, self.dim)
-        # x (batch_size,window_size,drive_num,spatial_dim)
-        x = self.proj_drop(self.proj(x))
-
-        return x
-
-
 class CNN_Block(nn.Module):
     def __init__(self, in_channels, out_channels) -> None:
         super().__init__()

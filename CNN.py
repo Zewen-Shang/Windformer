@@ -42,7 +42,7 @@ class SingledimConv(nn.Module):
 
 
 class CNN(nn.Module):
-    def __init__(self, feature_num, img_shape, window_size, kernels_per_layer=1, hidden_neurons=32):
+    def __init__(self, feature_num, img_shape, window_size, hidden_neurons, kernels_per_layer=1, ):
         super(CNN, self).__init__()
 
         assert(feature_num == 1)

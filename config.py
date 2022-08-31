@@ -1,3 +1,4 @@
+from CNN import CNN
 from CNN_Trans import CNN_Trans
 from Dual_Trans import Dual_Trans
 from Mult_Conv import Mult_Conv
@@ -76,7 +77,7 @@ args = {
         "feature_num":1,
         "window_size":6,
         "img_shape":[30,20],
-        "hidden_size":16,
+        "hidden_size":4,
         "target_pos":[15,10]
     },
     "LSTM_Seq":{
@@ -129,7 +130,13 @@ args = {
         "img_shape":[30,20],
         "window_size":6,
         "hidden_neurons":16
-    }
+    },
+    "CNN":{
+        "feature_num":1,
+        "img_shape":[30,20],
+        "window_size":6,
+        "hidden_neurons":16
+    },
 }
 
 models = {
@@ -146,5 +153,6 @@ models = {
     "MSTAN_Seq":MSTAN_Seq,
     "Dual_Trans":Dual_Trans,
     "CNN_Trans":CNN_Trans,
-    "Mult_Conv":Mult_Conv
+    "Mult_Conv":Mult_Conv,
+    "CNN":CNN
 }

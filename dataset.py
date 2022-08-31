@@ -10,18 +10,18 @@ import pdb
 
 BASE_URL = "../"
 
-def generate_img(save_fig=False):
+def generate_img(target_map,save_fig=False):
     # feature_names = ["speed_x","speed_y","temperature","pressure","density","speed"]
     feature_num = 6
 
-    ids_map = np.load(BASE_URL + "home/map0.npy",allow_pickle=True)
+    ids_map = np.load(BASE_URL + "home/map%d.npy"%target_map,allow_pickle=True)
     feature_data = np.zeros((feature_num,30,20,420769))
 
     for i in range(ids_map.shape[0]):
         for j in range(ids_map.shape[1]):
             # if(i == 15 and j == 10):
             #     print(ids_map[i,j])
-            turbine_data = np.load(BASE_URL + "input/input0/%d.npy"%ids_map[i,j],allow_pickle=True)
+            turbine_data = np.load(BASE_URL + "input/input%d/%d.npy"%(target_map,ids_map[i,j]),allow_pickle=True)
             feature_data[:,i,j] = turbine_data.transpose()
 
     # if save_fig:
@@ -31,7 +31,7 @@ def generate_img(save_fig=False):
     #         plt.savefig("./fig/" + feature_name + ".jpg")
     #         plt.cla()
 
-    np.save(BASE_URL + "home/npy/result/img_data.npy",feature_data)
+    np.save(BASE_URL + "home/npy/result/img_data.npy",feature_data[5:6])
     # plt.imshow(target_data[:,:,:].std(axis=2))
     # plt.savefig("./std.jpg")
 
@@ -93,7 +93,7 @@ def get_dataset_img(target_pos,window_size,predict_steps,seasons,debug=False):
             season_start = year_start + int(season / 4 * season_steps)
             season_end = season_start + season_steps
             for i in range(season_start,season_end-(window_size+predict_steps-1)):
-                data_item = [torch.from_numpy(feature_data[:,:,:,i:i+window_size]).to(dtype=torch.float),
-                torch.tensor([feature_data[-1,target_pos[0],target_pos[1],i+(window_size+predict_steps-1)]]).to(dtype=torch.float)]
+                data_item = [feature_data[:,:,:,i:i+window_size],
+                np.array(feature_data[-1,target_pos[0],target_pos[1],i+(window_size+predict_steps-1)]).reshape(1,1)]
                 dataset.append(data_item)
     return dataset
