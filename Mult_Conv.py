@@ -1,4 +1,3 @@
-from curses import window
 import torch
 from torch import nn
 from einops import rearrange

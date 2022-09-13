@@ -1,5 +1,3 @@
-from curses import window
-from turtle import forward
 import torch
 import torch.nn as nn
 
@@ -29,6 +27,3 @@ class LSTM(nn.Module):
         return output
 
         
-
-    
-

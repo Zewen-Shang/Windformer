@@ -42,26 +42,26 @@ class CNN(nn.Module):
         return x
 
 
-class LSTM_Attn(nn.Module):
-    def __init__(self, window_size, input_size, drive_num, hidden_size, device="cuda") -> None:
+class Spatial_Attn(nn.Module):
+    def __init__(self, window_size, feature_num, drive_num, hidden_size, device="cuda") -> None:
         super().__init__()
-        self.input_size = input_size
+        self.feature_num = feature_num
         self.drive_num = drive_num
         self.window_size = window_size
         self.hidden_size = hidden_size
         self.device = device
 
         self.encode_attn = nn.Linear(
-            input_size * window_size + 2*hidden_size, 1)
+            feature_num * window_size + 2*hidden_size, 1)
         self.softmax = nn.Softmax(-1)
         # ??
-        self.lstm = nn.LSTM(input_size=self.drive_num * input_size,
+        self.lstm = nn.LSTM(input_size=self.drive_num * feature_num,
                             hidden_size=hidden_size, num_layers=1, batch_first=True)
 
     def forward(self, input):
-        # input (batch_size,window_size,drive_num,input_size)
+        # input (batch_size,window_size,drive_num,feature_num)
         batch_size = input.shape[0]
-        # input (batch_size,drive_num,input_size,window_size)
+        # input (batch_size,drive_num,feature_num,window_size)
         input = input.permute(0, 2, 3, 1)
         self.hidden_states = torch.zeros(
             (batch_size, self.window_size+1, self.hidden_size), device=self.device)
@@ -79,14 +79,14 @@ class LSTM_Attn(nn.Module):
                                           t:t+1].repeat((1, self.drive_num, 1))
             # x (batch_size,drive_num,feature_num * window_size)
             x = input.reshape(batch_size, self.drive_num,
-                              self.input_size*self.window_size)
+                              self.feature_num*self.window_size)
             attn_in = torch.cat((hidden_state, cell_state, x), dim=2)
             # e,a (batch_size,drive_num)
             e = self.encode_attn(attn_in).squeeze()
             a = self.softmax(e)
             # x_hat (batch_size,drive_num * feature_num)
             x_hat = (a.unsqueeze(
-                2) * input[:, :, :, t]).reshape(batch_size, self.drive_num * self.input_size)
+                2) * input[:, :, :, t]).reshape(batch_size, self.drive_num * self.feature_num)
             _, (h_0, s_0) = self.lstm(x_hat.unsqueeze(
                 1), (h_0.contiguous(), s_0.contiguous()))
             self.hidden_states[:, t+1], self.cell_states[:,
@@ -170,25 +170,26 @@ class CNN_Trans(nn.Module):
         self.feature_num, self.window_size, self.hidden_size = feature_num, window_size, hidden_size
         self.hidden_channels, self.depth = hidden_channels, depth
         self.temporal_head = temporal_head
-
+        self.temporal_dim = temporal_dim
         self.img_shape = img_shape
 
         # self.spatial_attn = Spatial_Attn(window_size,feature_num,img_shape,patch_shape,spatial_dim,spatial_head)
         self.cnn = CNN(window_size, feature_num, img_shape,
                        hidden_channels=hidden_channels, depth=depth)
-        self.lstm_attn = LSTM_Attn(window_size=window_size, input_size=feature_num,
+        self.spatial_attn = Spatial_Attn(window_size=window_size, feature_num=feature_num,
                                    drive_num=img_shape[0] * img_shape[1], hidden_size=hidden_size)
 
         self.lstm = LSTM(input_size=hidden_size,
                          window_size=window_size, hidden_size=hidden_size)
 
-        self.cls = torch.rand((1, 1, hidden_size), device="cuda")
+        self.linear0 = nn.Linear(hidden_size,temporal_dim)
+        self.cls = torch.rand((1, 1, temporal_dim), device="cuda")
         # pos_embed (window_size + 1,hidden_state)
-        self.pos_embed = get_pos_emb(window_size=window_size, dim=hidden_size)
+        self.pos_embed = get_pos_emb(window_size=window_size, dim=temporal_dim)
         self.temporal_attn = Temporal_Attn(
-            dim=hidden_size, head_num=temporal_head, drop_prob=0.1)
+            dim=temporal_dim, head_num=temporal_head, drop_prob=0.1)
 
-        self.linear = nn.Linear(hidden_size, 1)
+        self.linear = nn.Linear(temporal_dim, 1)
 
     def forward(self, input):
         # input (batch_size,feature_num,img_height,img_weight,window_size)
@@ -200,14 +201,18 @@ class CNN_Trans(nn.Module):
         x = self.cnn(x)
 
         # x (batch_size,window_size,hidden_size)
-        x = self.lstm_attn(x)
+        x = self.spatial_attn(x)
 
         # x (batch_size,window_size,hidden_size)
         x = self.lstm(x)
-        # x (batch_size,window_size + 1,hidden_size)
+
+        # x (batch_size,window_size,temporal_num)
+        x = self.linear0(x)
+
+        # x (batch_size,window_size + 1,temporal_num)
         x = torch.cat((x, self.cls.repeat((batch_size, 1, 1))), dim=1)
         x = x + self.pos_embed.reshape(1, self.window_size+1,
-                                       self.hidden_size).repeat((batch_size, 1, 1))
+                                       self.temporal_dim).repeat((batch_size, 1, 1))
 
         x = self.temporal_attn(x)
         # x (batch_size,1,hidden_size)
