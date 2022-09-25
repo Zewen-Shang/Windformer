@@ -47,14 +47,15 @@ torch.manual_seed(300)
 
 criterion = nn.MSELoss()
 device = torch.device("cuda")
-# generate_img(2)
-for target_map in range(2,3):
-    
-    for predict_steps in [8,10]:
+
+for target_map in range(1,2):
+    # generate_img(1)
+    for predict_steps in [6]:
     #     for season in [0,1,2,3]:
     #    predict_steps = 8
         season = [0,1,2,3]
-        for model_name in ["CNN_Trans","LSTM","BLSTM","CNN","Mult_Conv"]:
+        for model_name in ["Spatial_Mlp"]:
+            batch_size = 256
             comment="%s_%d_%d_%d"%(model_name,target_map,-1,predict_steps)
             print(comment)
             start = time.time()
@@ -80,7 +81,6 @@ for target_map in range(2,3):
 
             # model_name = "CNN"
             epoch = 100
-            batch_size = 64
 
             dataloader_train = DataLoader(dataset_train,batch_size=batch_size,shuffle=True,num_workers=4,pin_memory=True)
             dataloader_test = DataLoader(dataset_test,batch_size=batch_size,num_workers=4,pin_memory=True)

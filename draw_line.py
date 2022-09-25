@@ -11,8 +11,9 @@ from matplotlib import font_manager
 
 font = font_manager.FontProperties(fname="./SIMSUN.TTF")
 
-label_size = 10
+label_size = 30
 tick_size = 20
+legend_size = 10
 linewidth = 1
 
 window_size = 6
@@ -42,7 +43,7 @@ def draw_year():
     dataset_train = dataset[:cut_pos]
     dataset_test = dataset[cut_pos:]
 
-    start_pos, end_pos= 500,600
+    start_pos, end_pos= 1000,5000
     actual_result = [item[1].squeeze().item() for item in dataset_test]
     plt.plot(actual_result[start_pos:end_pos],linewidth=linewidth,label="Real",color="black")
 
@@ -50,7 +51,7 @@ def draw_year():
 
     # model_names = ["CNN"]
     colors = ["b","g","r","c"]
-    model_names = ["CNN_Trans","BLSTM","LSTM","CNN"]
+    model_names = ["BLSTM","LSTM","CNN"]
 
     for model_name,color in zip(model_names,colors):
 
@@ -96,13 +97,13 @@ def draw_year():
         result = np.load("./result/%s_%d_-1_6.npy"%(model_name,target_map))
         plt.plot(result[start_pos:end_pos],linewidth=linewidth,label=model_name,color=color)
 
-    plt.xlabel("时间(min)",fontproperties=font,fontsize=tick_size)
-    plt.ylabel("风速(m/s)",fontproperties=font,fontsize=tick_size)
+    plt.xlabel("时间(min)",fontproperties=font,fontsize=label_size)
+    plt.ylabel("风速(m/s)",fontproperties=font,fontsize=label_size)
 
     plt.gca().set_xticks(np.linspace(0,end_pos-start_pos,11))
     plt.gca().set_xticklabels(np.linspace(start_pos*5,end_pos*5,11).astype(np.int))
 
-    plt.legend(loc="best",shadow=True,fontsize=label_size)
+    plt.legend(loc="best",shadow=True,fontsize=legend_size)
     plt.savefig("./line/year_%d_-1_6.jpg"%target_map,dpi=500)
     plt.show()
 
@@ -111,7 +112,7 @@ def draw_season(season):
 
     dataset = get_dataset_img([15,10],window_size,predict_steps,[season],debug=False)
 
-    plt.figure(figsize=(16,6))
+    plt.figure(figsize=(16,8))
 
     for i in range(len(dataset)):
         # dataset[i][0] = dataset[i][0][5:]
@@ -122,7 +123,7 @@ def draw_season(season):
     dataset_train = dataset[:cut_pos]
     dataset_test = dataset[cut_pos:]
 
-    start_pos, end_pos= 0,800
+    start_pos, end_pos= 400,800
     actual_result = [item[1].squeeze().item() for item in dataset_test]
     plt.plot(actual_result[start_pos:end_pos],linewidth=linewidth,label="Real")
 
@@ -143,14 +144,17 @@ def draw_season(season):
     result = result.cpu().numpy()
     plt.plot(result[start_pos:end_pos],linewidth=linewidth,label="MFDAWSP-Net")
 
-    plt.xlabel("时间(min)",fontproperties=font,fontsize=tick_size)
-    plt.ylabel("风速(m/s)",fontproperties=font,fontsize=tick_size)
+    plt.xlabel("时间(min)",fontproperties=font,fontsize=label_size)
+    plt.ylabel("风速(m/s)",fontproperties=font,fontsize=label_size)
 
-    plt.gca().set_xticks(np.linspace(0,end_pos-start_pos,11))
-    plt.gca().set_xticklabels(np.linspace(start_pos*5,end_pos*5,11).astype(np.int))
+    plt.gca().set_xticks(np.linspace(0,end_pos-start_pos,11),fontsize=tick_size)
+    plt.gca().set_xticklabels(np.linspace(start_pos*5,end_pos*5,11).astype(np.int),fontsize=tick_size)
+    plt.yticks(size=tick_size)
 
-    plt.legend(loc="best",shadow=True,fontsize=label_size)
-    plt.savefig("./line/season%d.jpg"%season,dpi=500)
+    plt.legend(loc="upper right",shadow=True,fontsize=legend_size)
+
+    #plt.margins(0, 0)
+    plt.savefig("./line/season%d.jpg"%season,dpi=500,bbox_inches='tight',pad_inches=0.0)
     plt.show()
 
 

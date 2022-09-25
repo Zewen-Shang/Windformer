@@ -2,6 +2,7 @@ from CNN import CNN
 from CNN_Trans import CNN_Trans
 from Dual_Trans import Dual_Trans
 from Mult_Conv import Mult_Conv
+from Spatial_Mlp import Spatial_Mlp
 from blstm import BLSTM
 from conformer import Conformer
 from lstm import LSTM
@@ -10,7 +11,7 @@ from lstm import LSTM
 # from resnet_MF import ResNet_Fig_MF
 # from vit import Vit
 # from vit_Seq import Vit_Seq
-from dualattn import DualAttn
+from Dual_Attn import Dual_Attn
 from dualattn_Seq import DualAttn_Seq
 from MSTAN_Seq import MSTAN_Seq
 from MSTAN import MSTAN
@@ -59,11 +60,11 @@ args = {
         "num_heads":8,
         "drop_prob":0.1
     },
-    "DualAttn":{
-        "drive_num":600,
-        "window_size":3,
-        "hidden_size":128,
-        "target_pos":[23,15]
+    "Dual_Attn":{
+        "img_shape":[30,20],
+        "window_size":6,
+        "hidden_size":64,
+        "target_pos":[15,10]
     },
     "DualAttn_Seq":{
         "feature_num":6,
@@ -143,6 +144,14 @@ args = {
         "window_size":6,
         "hidden_neurons":16
     },
+    "Spatial_Mlp":{
+        "feature_num":1,
+        "img_shape":[30,20],
+        "window_size":6,
+        "hidden_channels":16,
+        "depth":3,
+        "hidden_size":64
+    },
 }
 
 models = {
@@ -151,7 +160,7 @@ models = {
     # "ResNet_Fig_MF":ResNet_Fig_MF,
     # "Vit":Vit,
     # "Vit_Seq":Vit_Seq,
-    "DualAttn":DualAttn,
+    "Dual_Attn":Dual_Attn,
     "DualAttn_Seq":DualAttn_Seq,
     "LSTM":LSTM,
     "BLSTM":BLSTM,
@@ -161,5 +170,6 @@ models = {
     "Dual_Trans":Dual_Trans,
     "CNN_Trans":CNN_Trans,
     "Mult_Conv":Mult_Conv,
-    "CNN":CNN
+    "CNN":CNN,
+    "Spatial_Mlp":Spatial_Mlp
 }

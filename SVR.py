@@ -55,40 +55,42 @@ def test_time_displace(dataset_test):
         output[i] = output[0]
     return nn.MSELoss()(output,targets).item(),MAE(targets,output).item()
 
-target_map = 2
 window_size = 6
-predict_steps = 6
 season=[0,1,2,3]
 # 23,15
-dataset = get_dataset_img(target_pos=[15,10],window_size=window_size,predict_steps=predict_steps,seasons=season)
-# for i in range(len(dataset)):
-#     dataset[i][0] = dataset[i][0][-1:]
 
-X = [item[0][-1,15,10] for item in dataset]
-Y = [item[1].reshape(1) for item in dataset]
+for target_map in range(1,2):
+    for predict_steps in [8,10]:
 
-cut_pos = int(0.75 * len(dataset))
-X_train,Y_train = X[:cut_pos],Y[:cut_pos]
-X_test,Y_test = X[cut_pos:],Y[cut_pos:]
+        dataset = get_dataset_img(target_pos=[15,10],window_size=window_size,predict_steps=predict_steps,seasons=season)
+        # for i in range(len(dataset)):
+        #     dataset[i][0] = dataset[i][0][-1:]
 
-scaler = MinMaxScaler(feature_range =(-1,1)).fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
+        X = [item[0][-1,15,10] for item in dataset]
+        Y = [item[1].reshape(1) for item in dataset]
 
-# print(test_time_displace(dataset_test))
+        cut_pos = int(0.75 * len(dataset))
+        X_train,Y_train = X[:cut_pos],Y[:cut_pos]
+        X_test,Y_test = X[cut_pos:],Y[cut_pos:]
 
-model = SVR(kernel="linear")
+        scaler = MinMaxScaler(feature_range =(-1,1)).fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_test = scaler.transform(X_test)
 
-start = time.time()
-model.fit(X_train,Y_train)
-end = time.time()
-print("%f s. "%(end-start))
+        # print(test_time_displace(dataset_test))
 
-import pickle
-with open('./model_new/SVR_%d_-1_%d.pkl'%(target_map,predict_steps), 'wb') as f:
-    pickle.dump(model, f)
+        model = SVR(kernel="linear")
 
-Y_predict = model.predict(X_test)
+        start = time.time()
+        model.fit(X_train,Y_train)
+        end = time.time()
+        print("%f s. "%(end-start))
 
-print("MSE:%f, MAE:%f"%(MSE(Y_predict,Y_test),MAE(Y_predict,Y_test)))
-np.save("./result/SVR_%d_-1_%d"%(target_map,predict_steps),Y_predict)
+        import pickle
+        with open('./model_new/SVR_%d_-1_%d.pkl'%(target_map,predict_steps), 'wb') as f:
+            pickle.dump(model, f)
+
+        Y_predict = model.predict(X_test)
+
+        print("MSE:%f, MAE:%f"%(MSE(Y_predict,Y_test),MAE(Y_predict,Y_test)))
+        np.save("./result/SVR_%d_-1_%d"%(target_map,predict_steps),Y_predict)
