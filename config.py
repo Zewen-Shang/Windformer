@@ -131,6 +131,7 @@ args = {
         "hidden_size":64,
         "temporal_dim":64,
         "temporal_head":8,
+        "trans_num":3
     },
     "Mult_Conv":{
         "feature_num":1,

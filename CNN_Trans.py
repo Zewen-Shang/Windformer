@@ -1,3 +1,4 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 
@@ -122,7 +123,7 @@ class LSTM(nn.Module):
 
 
 def get_pos_emb(window_size, dim, device="cuda", temperature=1e4, dtype=torch.float):
-    pos = torch.arange(0, window_size+1, device=device)
+    pos = torch.arange(0, window_size, device=device)
 
     omega = torch.arange(dim//2, device=device)/(dim/2-1)
     omega = 1. / temperature ** omega
@@ -132,7 +133,7 @@ def get_pos_emb(window_size, dim, device="cuda", temperature=1e4, dtype=torch.fl
     return pos_embed.to(dtype)
 
 
-class Temporal_Attn(nn.Module):
+class Multi_Head(nn.Module):
     def __init__(self, dim, head_num, drop_prob) -> None:
         super().__init__()
         self.dim = dim
@@ -163,8 +164,30 @@ class Temporal_Attn(nn.Module):
         return output
 
 
+class Trans_Block(nn.Module):
+    def __init__(self,dim,head) -> None:
+        super().__init__()
+        self.multi_head = Multi_Head(dim=dim, head_num=head, drop_prob=0.1)
+        self.layer_norm0 = nn.LayerNorm(dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(dim,dim*4),
+            nn.ReLU(),
+            nn.Linear(4*dim,dim)
+        )
+        self.layer_norm1 = nn.LayerNorm(dim)
+
+    def forward(self,input):
+        x = self.multi_head(input)
+        x += input
+        x0 = self.layer_norm0(x)
+
+        x = self.mlp(x0)
+        x += x0
+        x = self.layer_norm1(x)
+        return x
+
 class CNN_Trans(nn.Module):
-    def __init__(self, feature_num, img_shape, window_size, hidden_channels, depth, hidden_size, temporal_dim, temporal_head) -> None:
+    def __init__(self, feature_num, img_shape, window_size, hidden_channels, depth, hidden_size, temporal_dim, temporal_head,trans_num) -> None:
         super().__init__()
 
         self.feature_num, self.window_size, self.hidden_size = feature_num, window_size, hidden_size
@@ -186,10 +209,12 @@ class CNN_Trans(nn.Module):
         self.cls = torch.rand((1, 1, temporal_dim), device="cuda")
         # pos_embed (window_size + 1,hidden_state)
         self.pos_embed = get_pos_emb(window_size=window_size, dim=temporal_dim)
-        self.temporal_attn = Temporal_Attn(
-            dim=temporal_dim, head_num=temporal_head, drop_prob=0.1)
 
-        self.linear = nn.Linear(temporal_dim, 1)
+        self.trans_blocks = nn.ModuleList(
+            [Trans_Block(dim=temporal_dim,head=temporal_head) for i in range(trans_num)]
+        )
+
+        self.linear1 = nn.Linear(temporal_dim, 1)
 
     def forward(self, input):
         # input (batch_size,feature_num,img_height,img_weight,window_size)
@@ -206,19 +231,20 @@ class CNN_Trans(nn.Module):
         # x (batch_size,window_size,hidden_size)
         x = self.lstm(x)
 
-        # x (batch_size,window_size,temporal_num)
+        # x (batch_size,window_size,temporal_dim)
         x = self.linear0(x)
 
-        # x (batch_size,window_size + 1,temporal_num)
-        x = torch.cat((x, self.cls.repeat((batch_size, 1, 1))), dim=1)
-        x = x + self.pos_embed.reshape(1, self.window_size+1,
+        # x (batch_size,window_size,temporal_dim)
+        # x = torch.cat((x, self.cls.repeat((batch_size, 1, 1))), dim=1)
+        x = x + self.pos_embed.reshape(1, self.window_size,
                                        self.temporal_dim).repeat((batch_size, 1, 1))
 
-        x = self.temporal_attn(x)
+        for block in self.trans_blocks:
+            x = block(x)
         # x (batch_size,1,hidden_size)
-        x = x[:, 0]
+        x = x[:, -1]
 
         # x = nn.functional.relu(x)
-        x = self.linear(x)
+        x = self.linear1(x)
 
         return x

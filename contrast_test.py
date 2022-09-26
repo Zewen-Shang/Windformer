@@ -50,12 +50,12 @@ device = torch.device("cuda")
 
 for target_map in range(1,2):
     # generate_img(1)
-    for predict_steps in [6]:
+    for predict_steps in [6,8]:
     #     for season in [0,1,2,3]:
     #    predict_steps = 8
         season = [0,1,2,3]
         for model_name in ["Spatial_Mlp"]:
-            batch_size = 256
+            batch_size = 64
             comment="%s_%d_%d_%d"%(model_name,target_map,-1,predict_steps)
             print(comment)
             start = time.time()
@@ -88,7 +88,7 @@ for target_map in range(1,2):
             model = models[model_name](**args[model_name])
             model.to(device)
 
-            lr = 1e-3
+            lr = 1e-3 / 64 * batch_size
             optimizer = torch.optim.Adam(model.parameters(),lr=lr,weight_decay=1e-3)
 
             comment="%s_%d_%d_%d"%(model_name,target_map,-1,predict_steps)

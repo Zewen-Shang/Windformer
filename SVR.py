@@ -55,12 +55,12 @@ def test_time_displace(dataset_test):
         output[i] = output[0]
     return nn.MSELoss()(output,targets).item(),MAE(targets,output).item()
 
-window_size = 6
+window_size = 3
 season=[0,1,2,3]
 # 23,15
 
 for target_map in range(1,2):
-    for predict_steps in [8,10]:
+    for predict_steps in [6]:
 
         dataset = get_dataset_img(target_pos=[15,10],window_size=window_size,predict_steps=predict_steps,seasons=season)
         # for i in range(len(dataset)):
@@ -71,6 +71,7 @@ for target_map in range(1,2):
 
         cut_pos = int(0.75 * len(dataset))
         X_train,Y_train = X[:cut_pos],Y[:cut_pos]
+        #X_train,Y_train = X[:cut_pos:5],Y[:cut_pos:5]
         X_test,Y_test = X[cut_pos:],Y[cut_pos:]
 
         scaler = MinMaxScaler(feature_range =(-1,1)).fit(X_train)
