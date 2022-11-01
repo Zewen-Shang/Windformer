@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from torch.backends import cudnn
-import matplotlib.pyplot as plt
 import numpy as np 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -9,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 import time
 from dataset import *
 from utils import MAE
-from config import args,models
+# from config import args,models
 
 @torch.no_grad()
 def test_model(model,dataloader,device):
@@ -41,6 +40,8 @@ def test_time_displace(dataset_test):
     return nn.MSELoss()(output,targets).item(),MAE(output,targets).item()
 
 
+get_dataset(1,6,6)
+
 cudnn.benchmark = True
 
 torch.manual_seed(300)
@@ -48,19 +49,15 @@ torch.manual_seed(300)
 criterion = nn.MSELoss()
 device = torch.device("cuda")
 
-for target_map in range(1,2):
-    # generate_img(1)
-    for predict_steps in [6,8]:
-    #     for season in [0,1,2,3]:
-    #    predict_steps = 8
-        season = [0,1,2,3]
-        for model_name in ["Spatial_Mlp"]:
+for target_map in [1]:
+    for predict_steps in [6]:
+        for model_name in ["None_Mlp"]:
             batch_size = 64
-            comment="%s_%d_%d_%d"%(model_name,target_map,-1,predict_steps)
+            comment="%s_%d_%d_%d_AdamW"%(model_name,target_map,-1,predict_steps)
             print(comment)
             start = time.time()
             # 23,15
-            dataset = get_dataset_img([15,10],window_size,predict_steps,season,debug=False)
+            dataset = get_dataset_img(target_map,[15,10],window_size,predict_steps,season,debug=False)
             # np.save("./dataset/input0/0.npy",dataset)
             # dataset = np.load("./dataset/input0/0.npy",allow_pickle=True)
 
@@ -89,9 +86,8 @@ for target_map in range(1,2):
             model.to(device)
 
             lr = 1e-3 / 64 * batch_size
-            optimizer = torch.optim.Adam(model.parameters(),lr=lr,weight_decay=1e-3)
+            optimizer = torch.optim.AdamW(model.parameters(),lr=lr,weight_decay=1e-3)
 
-            comment="%s_%d_%d_%d"%(model_name,target_map,-1,predict_steps)
             writer = SummaryWriter("./tf_dir/%s"%comment,comment=comment)
 
             for i in range(epoch):

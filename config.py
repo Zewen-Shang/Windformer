@@ -2,7 +2,9 @@ from CNN import CNN
 from CNN_Trans import CNN_Trans
 from Dual_Trans import Dual_Trans
 from Mult_Conv import Mult_Conv
+from None_Trans import None_Trans
 from Spatial_Mlp import Spatial_Mlp
+from None_Mlp import None_Mlp
 from blstm import BLSTM
 from conformer import Conformer
 from lstm import LSTM
@@ -131,7 +133,18 @@ args = {
         "hidden_size":64,
         "temporal_dim":64,
         "temporal_head":8,
-        "trans_num":3
+        "trans_num":1
+    },
+    "CNN_Trans_Tiny":{
+        "feature_num":1,
+        "img_shape":[30,20],
+        "window_size":6,
+        "hidden_channels":16,
+        "depth":3,
+        "hidden_size":32,
+        "temporal_dim":32,
+        "temporal_head":4,
+        "trans_num":1
     },
     "Mult_Conv":{
         "feature_num":1,
@@ -153,6 +166,21 @@ args = {
         "depth":3,
         "hidden_size":64
     },
+    "None_Trans":{
+        "feature_num":1,
+        "img_shape":[30,20],
+        "window_size":6,
+        "hidden_size":64,
+        "temporal_dim":64,
+        "temporal_head":8,
+        "trans_num":1
+    },
+    "None_Mlp":{
+        "feature_num":1,
+        "img_shape":[30,20],
+        "window_size":6,
+        "hidden_size":64
+    },
 }
 
 models = {
@@ -170,7 +198,10 @@ models = {
     "MSTAN_Seq":MSTAN_Seq,
     "Dual_Trans":Dual_Trans,
     "CNN_Trans":CNN_Trans,
+    "CNN_Trans_Tiny":CNN_Trans,
     "Mult_Conv":Mult_Conv,
     "CNN":CNN,
-    "Spatial_Mlp":Spatial_Mlp
+    "Spatial_Mlp":Spatial_Mlp,
+    "None_Trans":None_Trans,
+    "None_Mlp":None_Mlp
 }

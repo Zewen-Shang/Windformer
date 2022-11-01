@@ -48,13 +48,13 @@ torch.manual_seed(300)
 criterion = nn.MSELoss()
 device = torch.device("cuda")
 
-for target_map in range(1,2):
-    # generate_img(target_map)
-    for predict_steps in [10]:
-        for season in [0,1,2,3]:
-            for model_name in ["CNN_Trans"]:
+for target_map in [1]:
+    #generate_img(target_map)
+    for predict_steps in [6]:
+        for season in [0]:
+            for model_name in ["CNN_Trans_Tiny"]:
                 
-                comment="%s_%d_%d_%d"%(model_name,target_map,season,predict_steps)
+                comment="%s_%d_%d_%d_AdamW_nodrop"%(model_name,target_map,season,predict_steps)
                 print(comment)
                 start = time.time()
                 # 23,15
@@ -77,58 +77,58 @@ for target_map in range(1,2):
                 print("Prepare Data : %f s"%(end-start))
 
 
-                # # model_name = "CNN"
-                # epoch = 100
-                # batch_size = 64
+                # model_name = "CNN"
+                epoch = 30
+                batch_size = 64
 
-                # dataloader_train = DataLoader(dataset_train,batch_size=batch_size,shuffle=True,num_workers=4,pin_memory=True)
-                # dataloader_test = DataLoader(dataset_test,batch_size=batch_size,num_workers=4,pin_memory=True)
+                dataloader_train = DataLoader(dataset_train,batch_size=batch_size,shuffle=True,num_workers=4,pin_memory=True)
+                dataloader_test = DataLoader(dataset_test,batch_size=batch_size,num_workers=4,pin_memory=True)
 
-                # model = models[model_name](**args[model_name])
-                # model.to(device)
+                model = models[model_name](**args[model_name])
+                model.to(device)
 
-                # lr = 1e-3
-                # optimizer = torch.optim.Adam(model.parameters(),lr=lr,weight_decay=1e-3)
+                lr = 1e-3 * 64 / batch_size
+                optimizer = torch.optim.AdamW(model.parameters(),lr=lr,weight_decay=1e-3)
 
                 
-                # writer = SummaryWriter("./tf_dir/%s"%comment,comment=comment)
+                writer = SummaryWriter("./tf_dir/%s"%comment,comment=comment)
 
-                # for i in range(epoch):
-                #     if(i == 20):
-                #         lr *= 0.5
-                #         for param_group in optimizer.param_groups:
-                #             param_group['lr'] = lr
-                #     if(i == 30):
-                #         lr *= 0.2
-                #         for param_group in optimizer.param_groups:
-                #             param_group['lr'] = lr
+                for i in range(epoch):
+                    if(i == 10):
+                        lr *= 0.5
+                        for param_group in optimizer.param_groups:
+                            param_group['lr'] = lr
+                    if(i == 20):
+                        lr *= 0.5
+                        for param_group in optimizer.param_groups:
+                            param_group['lr'] = lr
 
-                #     # if(i == 70):
-                #     #     lr *= 0.1
-                #     #     for param_group in optimizer.param_groups:
-                #     #         param_group['lr'] = lr
+                    # if(i == 70):
+                    #     lr *= 0.1
+                    #     for param_group in optimizer.param_groups:
+                    #         param_group['lr'] = lr
 
-                #     start = time.time()
-                #     model.train()
-                #     for imgs,targets in dataloader_train:
-                #         imgs = imgs.to(device)
-                #         targets = targets.to(device).squeeze()
-                #         output = model(imgs).squeeze()
-                #         loss = criterion(output,targets)
-                #         optimizer.zero_grad()
-                #         loss.backward()
-                #         optimizer.step()
+                    start = time.time()
+                    model.train()
+                    for imgs,targets in dataloader_train:
+                        imgs = imgs.to(device)
+                        targets = targets.to(device).squeeze()
+                        output = model(imgs).squeeze()
+                        loss = criterion(output,targets)
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
-                #     model.eval()
+                    model.eval()
                     
-                #     train_MSE,train_MAE = test_model(model,dataloader_train,device)
-                #     test_MSE,test_MAE = test_model(model,dataloader_test,device)
+                    train_MSE,train_MAE = test_model(model,dataloader_train,device)
+                    test_MSE,test_MAE = test_model(model,dataloader_test,device)
 
-                #     end = time.time()
+                    end = time.time()
 
-                #     print("Epoch %d : Train MSE : %f, Train MAE : %f , Test MSE : %f , Test MAE : %f , Lr : %f , Time: %f s ." % (i,train_MSE,train_MAE,test_MSE, test_MAE ,optimizer.param_groups[0]['lr'],end-start))
-                #     writer.add_scalar('train_MSE', train_MSE.item(), i)
-                #     writer.add_scalar('train_MAE', train_MAE.item(), i)
-                #     writer.add_scalar('test_MSE', test_MSE.item(), i)
-                #     writer.add_scalar('test_MAE', test_MAE.item(), i)
-                # torch.save(model,"./model/%s.pt"%comment)
+                    print("Epoch %d : Train MSE : %f, Train MAE : %f , Test MSE : %f , Test MAE : %f , Lr : %f , Time: %f s ." % (i,train_MSE,train_MAE,test_MSE, test_MAE ,optimizer.param_groups[0]['lr'],end-start))
+                    writer.add_scalar('train_MSE', train_MSE.item(), i)
+                    writer.add_scalar('train_MAE', train_MAE.item(), i)
+                    writer.add_scalar('test_MSE', test_MSE.item(), i)
+                    writer.add_scalar('test_MAE', test_MAE.item(), i)
+                torch.save(model,"./model_new/%s.pt"%comment)

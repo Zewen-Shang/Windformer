@@ -83,7 +83,7 @@ class Spatial_Attn(nn.Module):
                               self.feature_num*self.window_size)
             attn_in = torch.cat((hidden_state, cell_state, x), dim=2)
             # e,a (batch_size,drive_num)
-            e = self.encode_attn(attn_in).squeeze()
+            e = self.encode_attn(attn_in).reshape(batch_size,self.drive_num)
             a = self.softmax(e)
             # x_hat (batch_size,drive_num * feature_num)
             x_hat = (a.unsqueeze(
@@ -91,7 +91,7 @@ class Spatial_Attn(nn.Module):
             _, (h_0, s_0) = self.lstm(x_hat.unsqueeze(
                 1), (h_0.contiguous(), s_0.contiguous()))
             self.hidden_states[:, t+1], self.cell_states[:,
-                                                         t+1] = h_0.squeeze(), s_0.squeeze()
+                                                         t+1] = h_0.reshape(batch_size,self.hidden_size), s_0.reshape(batch_size,self.hidden_size)
 
         # output (batch_size,window_size,hidden_size)
         return self.hidden_states[:, 1:]
@@ -167,7 +167,7 @@ class Multi_Head(nn.Module):
 class Trans_Block(nn.Module):
     def __init__(self,dim,head) -> None:
         super().__init__()
-        self.multi_head = Multi_Head(dim=dim, head_num=head, drop_prob=0.1)
+        self.multi_head = Multi_Head(dim=dim, head_num=head, drop_prob=0)
         self.layer_norm0 = nn.LayerNorm(dim)
         self.mlp = nn.Sequential(
             nn.Linear(dim,dim*4),
