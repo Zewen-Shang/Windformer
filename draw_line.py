@@ -16,7 +16,7 @@ tick_size = 20
 legend_size = 10
 linewidth = 1
 
-window_size = 6
+input_steps = 6
 predict_steps = 6
 batch_size = 64
 target_map = 1
@@ -35,7 +35,7 @@ def draw_year():
 
     season = [0,1,2,3]
 
-    dataset = get_dataset_img(target_map,[15,10],window_size,predict_steps,season,debug=False)
+    dataset = get_dataset_img(target_map,[15,10],input_steps,predict_steps,season,debug=False)
 
     plt.figure(figsize=(16,6))
     
@@ -138,7 +138,7 @@ def draw_season(season):
     fig = plt.figure(figsize=(16,8))
     
 
-    dataset = get_dataset_img(target_map,[15,10],window_size,predict_steps,[season],debug=False)
+    dataset = get_dataset_img(target_map,[15,10],input_steps,predict_steps,[season],debug=False)
 
     for i in range(len(dataset)):
         # dataset[i][0] = dataset[i][0][5:]

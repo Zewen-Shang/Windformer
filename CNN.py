@@ -23,15 +23,15 @@ class DepthwiseSeparableConv(nn.Module):
 
 
 class SingledimConv(nn.Module):
-    def __init__(self, height,width, window_size, kernels_per_layer=1):
+    def __init__(self, height,width, input_steps, kernels_per_layer=1):
         super(SingledimConv, self).__init__()
         self.window = DepthwiseSeparableConv(
-            window_size, window_size, kernels_per_layer=kernels_per_layer
+            input_steps, input_steps, kernels_per_layer=kernels_per_layer
         )
-        self.bn_window = nn.BatchNorm2d(window_size)
+        self.bn_window = nn.BatchNorm2d(input_steps)
 
     def forward(self, input):
-        # input (batch_size,height,width,window_size)
+        # input (batch_size,height,width,input_steps)
         x_window = self.window(rearrange(input,"b h w win -> b win h w"))
         
         x_window = nn.functional.relu(self.bn_window(x_window))
@@ -41,28 +41,28 @@ class SingledimConv(nn.Module):
 
 
 class CNN(nn.Module):
-    def __init__(self, feature_num, img_shape, window_size, hidden_neurons, kernels_per_layer=1, ):
+    def __init__(self, num_features, img_shape, input_steps, hidden_neurons, kernels_per_layer=1, ):
         super(CNN, self).__init__()
 
-        assert(feature_num == 1)
+        assert(num_features == 1)
 
         self.img_shape = img_shape
-        self.window_size = window_size
+        self.input_steps = input_steps
 
         self.singledim = SingledimConv(
-            img_shape[0],img_shape[1], window_size, kernels_per_layer=kernels_per_layer,
+            img_shape[0],img_shape[1], input_steps, kernels_per_layer=kernels_per_layer,
         )
 
         self.merge = nn.Linear(
-            img_shape[0] * img_shape[1] * window_size, hidden_neurons)
+            img_shape[0] * img_shape[1] * input_steps, hidden_neurons)
         self.output = nn.Linear(hidden_neurons, 1)
 
     def forward(self, input):
-        # input (batch_size,feature_num,img_height,img_weight,window_size)
+        # input (batch_size,num_features,img_height,img_weight,input_steps)
         batch_size = input.shape[0]
-        # x (batch_size,height,width,window_size)
+        # x (batch_size,height,width,input_steps)
         x = input.reshape(batch_size,
-                          self.img_shape[0],self.img_shape[1], self.window_size)
+                          self.img_shape[0],self.img_shape[1], self.input_steps)
         output = self.singledim(x)
         output = nn.functional.relu(self.merge(output))
         output = self.output(output)

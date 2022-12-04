@@ -26,7 +26,7 @@ def test_model(model,dataloader,device):
         total_num += len(imgs)
     return total_MSE / total_num,total_MAE / total_num
 
-window_size = 6
+input_steps = 6
 
 
 def test_time_displace(dataset_test):
@@ -58,7 +58,7 @@ for target_map in [1]:
                 print(comment)
                 start = time.time()
                 # 23,15
-                dataset = get_dataset_img([15,10],window_size,predict_steps,[season],debug=False)
+                dataset = get_dataset_img([15,10],input_steps,predict_steps,[season],debug=False)
                 # np.save("./dataset/input0/0.npy",dataset)
                 # dataset = np.load("./dataset/input0/0.npy",allow_pickle=True)
 

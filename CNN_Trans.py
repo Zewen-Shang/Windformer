@@ -18,58 +18,58 @@ class CNN_Block(nn.Module):
 
 
 class CNN(nn.Module):
-    def __init__(self, window_size, feature_num, img_shape, hidden_channels, depth) -> None:
+    def __init__(self, input_steps, num_features, img_shape, hidden_channels, depth) -> None:
         super().__init__()
-        self.window_size, self.feature_num, self.img_shape = window_size, feature_num, img_shape
+        self.input_steps, self.num_features, self.img_shape = input_steps, num_features, img_shape
         self.hidden_channels, self.depth = hidden_channels, depth
-        self.conv0 = nn.Conv2d(feature_num, hidden_channels, 1, padding="same")
+        self.conv0 = nn.Conv2d(num_features, hidden_channels, 1, padding="same")
         self.blocks = nn.ModuleList(
             [CNN_Block(hidden_channels, hidden_channels) for i in range(depth)]
         )
-        self.conv1 = nn.Conv2d(hidden_channels, feature_num, 1, padding="same")
+        self.conv1 = nn.Conv2d(hidden_channels, num_features, 1, padding="same")
 
     def forward(self, input):
-        # input (batch_size,window_size,feature_num,img_height,img_weight)
+        # input (batch_size,input_steps,num_features,img_height,img_weight)
         batch_size = input.shape[0]
-        x = input.reshape(batch_size * self.window_size,
-                          self.feature_num, self.img_shape[0], self.img_shape[1])
+        x = input.reshape(batch_size * self.input_steps,
+                          self.num_features, self.img_shape[0], self.img_shape[1])
         x = self.conv0(x)
         for block in self.blocks:
             x = block(x)
         x = self.conv1(x)
-        x = x.reshape(batch_size, self.window_size, self.feature_num,
+        x = x.reshape(batch_size, self.input_steps, self.num_features,
                       self.img_shape[0] * self.img_shape[1])
         x = x.permute(0, 1, 3, 2)
         return x
 
 
 class Spatial_Attn(nn.Module):
-    def __init__(self, window_size, feature_num, drive_num, hidden_size, device="cuda") -> None:
+    def __init__(self, input_steps, num_features, drive_num, hidden_size, device="cuda") -> None:
         super().__init__()
-        self.feature_num = feature_num
+        self.num_features = num_features
         self.drive_num = drive_num
-        self.window_size = window_size
+        self.input_steps = input_steps
         self.hidden_size = hidden_size
         self.device = device
 
         self.encode_attn = nn.Linear(
-            feature_num * window_size + 2*hidden_size, 1)
+            num_features * input_steps + 2*hidden_size, 1)
         self.softmax = nn.Softmax(-1)
         # ??
-        self.lstm = nn.LSTM(input_size=self.drive_num * feature_num,
+        self.lstm = nn.LSTM(input_size=self.drive_num * num_features,
                             hidden_size=hidden_size, num_layers=1, batch_first=True)
 
     def forward(self, input):
-        # input (batch_size,window_size,drive_num,feature_num)
+        # input (batch_size,input_steps,drive_num,num_features)
         batch_size = input.shape[0]
-        # input (batch_size,drive_num,feature_num,window_size)
+        # input (batch_size,drive_num,num_features,input_steps)
         input = input.permute(0, 2, 3, 1)
         self.hidden_states = torch.zeros(
-            (batch_size, self.window_size+1, self.hidden_size), device=self.device)
+            (batch_size, self.input_steps+1, self.hidden_size), device=self.device)
         self.cell_states = torch.zeros(
-            (batch_size, self.window_size+1, self.hidden_size), device=self.device)
+            (batch_size, self.input_steps+1, self.hidden_size), device=self.device)
 
-        for t in range(self.window_size):
+        for t in range(self.input_steps):
             # h_0,s_0 (1,batch_size,hiden_size)
             h_0, s_0 = self.hidden_states[:, t:t+1].permute(
                 1, 0, 2), self.cell_states[:, t:t+1].permute(1, 0, 2)
@@ -78,30 +78,30 @@ class Spatial_Attn(nn.Module):
                                               t:t+1].repeat((1, self.drive_num, 1))
             cell_state = self.cell_states[:,
                                           t:t+1].repeat((1, self.drive_num, 1))
-            # x (batch_size,drive_num,feature_num * window_size)
+            # x (batch_size,drive_num,num_features * input_steps)
             x = input.reshape(batch_size, self.drive_num,
-                              self.feature_num*self.window_size)
+                              self.num_features*self.input_steps)
             attn_in = torch.cat((hidden_state, cell_state, x), dim=2)
             # e,a (batch_size,drive_num)
             e = self.encode_attn(attn_in).reshape(batch_size,self.drive_num)
             a = self.softmax(e)
-            # x_hat (batch_size,drive_num * feature_num)
+            # x_hat (batch_size,drive_num * num_features)
             x_hat = (a.unsqueeze(
-                2) * input[:, :, :, t]).reshape(batch_size, self.drive_num * self.feature_num)
+                2) * input[:, :, :, t]).reshape(batch_size, self.drive_num * self.num_features)
             _, (h_0, s_0) = self.lstm(x_hat.unsqueeze(
                 1), (h_0.contiguous(), s_0.contiguous()))
             self.hidden_states[:, t+1], self.cell_states[:,
                                                          t+1] = h_0.reshape(batch_size,self.hidden_size), s_0.reshape(batch_size,self.hidden_size)
 
-        # output (batch_size,window_size,hidden_size)
+        # output (batch_size,input_steps,hidden_size)
         return self.hidden_states[:, 1:]
 
 
 class LSTM(nn.Module):
-    def __init__(self, input_size, window_size, hidden_size) -> None:
+    def __init__(self, input_size, input_steps, hidden_size) -> None:
         super().__init__()
         self.input_size = input_size
-        self.window_size = window_size
+        self.input_steps = input_steps
         self.hidden_size = hidden_size
 
         self.lstm = nn.LSTM(
@@ -110,20 +110,20 @@ class LSTM(nn.Module):
         self.layernorm = nn.LayerNorm(hidden_size)
 
     def forward(self, input):
-        #input (batch_size,window_size,feature_num)
+        #input (batch_size,input_steps,num_features)
         batch_size = input.shape[0]
-        # x (batch_size,window_size,hidden_size)
+        # x (batch_size,input_steps,hidden_size)
         x, (h_n, c_n) = self.lstm(input)
 
         gate_x = self.gate(x.repeat((1, 1, 2)))
         x = x + gate_x
         x = self.layernorm(x)
-        # x (batch_size,window_size,hidden_size)
+        # x (batch_size,input_steps,hidden_size)
         return x
 
 
-def get_pos_emb(window_size, dim, device="cuda", temperature=1e4, dtype=torch.float):
-    pos = torch.arange(0, window_size, device=device)
+def get_pos_emb(input_steps, dim, device="cuda", temperature=1e4, dtype=torch.float):
+    pos = torch.arange(0, input_steps, device=device)
 
     omega = torch.arange(dim//2, device=device)/(dim/2-1)
     omega = 1. / temperature ** omega
@@ -149,7 +149,7 @@ class Multi_Head(nn.Module):
         self.proj_drop = nn.Dropout(drop_prob)
 
     def forward(self, input):
-        # input (batch_size,window_size+1,hidden_state)
+        # input (batch_size,input_steps+1,hidden_state)
         batch_size, num_seq = input.shape[0], input.shape[1]
         assert(self.dim == input.shape[2])
         x = input
@@ -187,28 +187,28 @@ class Trans_Block(nn.Module):
         return x
 
 class CNN_Trans(nn.Module):
-    def __init__(self, feature_num, img_shape, window_size, hidden_channels, depth, hidden_size, temporal_dim, temporal_head,trans_num) -> None:
+    def __init__(self, num_features, img_shape, input_steps, hidden_channels, depth, hidden_size, temporal_dim, temporal_head,trans_num) -> None:
         super().__init__()
 
-        self.feature_num, self.window_size, self.hidden_size = feature_num, window_size, hidden_size
+        self.num_features, self.input_steps, self.hidden_size = num_features, input_steps, hidden_size
         self.hidden_channels, self.depth = hidden_channels, depth
         self.temporal_head = temporal_head
         self.temporal_dim = temporal_dim
         self.img_shape = img_shape
 
-        # self.spatial_attn = Spatial_Attn(window_size,feature_num,img_shape,patch_shape,spatial_dim,spatial_head)
-        self.cnn = CNN(window_size, feature_num, img_shape,
+        # self.spatial_attn = Spatial_Attn(input_steps,num_features,img_shape,patch_shape,spatial_dim,spatial_head)
+        self.cnn = CNN(input_steps, num_features, img_shape,
                        hidden_channels=hidden_channels, depth=depth)
-        self.spatial_attn = Spatial_Attn(window_size=window_size, feature_num=feature_num,
+        self.spatial_attn = Spatial_Attn(input_steps=input_steps, num_features=num_features,
                                    drive_num=img_shape[0] * img_shape[1], hidden_size=hidden_size)
 
         self.lstm = LSTM(input_size=hidden_size,
-                         window_size=window_size, hidden_size=hidden_size)
+                         input_steps=input_steps, hidden_size=hidden_size)
 
         self.linear0 = nn.Linear(hidden_size,temporal_dim)
         self.cls = torch.rand((1, 1, temporal_dim), device="cuda")
-        # pos_embed (window_size + 1,hidden_state)
-        self.pos_embed = get_pos_emb(window_size=window_size, dim=temporal_dim)
+        # pos_embed (input_steps + 1,hidden_state)
+        self.pos_embed = get_pos_emb(input_steps=input_steps, dim=temporal_dim)
 
         self.trans_blocks = nn.ModuleList(
             [Trans_Block(dim=temporal_dim,head=temporal_head) for i in range(trans_num)]
@@ -217,26 +217,26 @@ class CNN_Trans(nn.Module):
         self.linear1 = nn.Linear(temporal_dim, 1)
 
     def forward(self, input):
-        # input (batch_size,feature_num,img_height,img_weight,window_size)
+        # input (batch_size,num_features,img_height,img_weight,input_steps)
         batch_size = input.shape[0]
-        # x (batch_size,window_size,feature_num,img_height,img_weight)
+        # x (batch_size,input_steps,num_features,img_height,img_weight)
         x = input.permute(0, 4, 1, 2, 3)
 
-        # x (batch_size,window_size,drive_num,hidden_channels)
+        # x (batch_size,input_steps,drive_num,hidden_channels)
         x = self.cnn(x)
 
-        # x (batch_size,window_size,hidden_size)
+        # x (batch_size,input_steps,hidden_size)
         x = self.spatial_attn(x)
 
-        # x (batch_size,window_size,hidden_size)
+        # x (batch_size,input_steps,hidden_size)
         x = self.lstm(x)
 
-        # x (batch_size,window_size,temporal_dim)
+        # x (batch_size,input_steps,temporal_dim)
         x = self.linear0(x)
 
-        # x (batch_size,window_size,temporal_dim)
+        # x (batch_size,input_steps,temporal_dim)
         # x = torch.cat((x, self.cls.repeat((batch_size, 1, 1))), dim=1)
-        x = x + self.pos_embed.reshape(1, self.window_size,
+        x = x + self.pos_embed.reshape(1, self.input_steps,
                                        self.temporal_dim).repeat((batch_size, 1, 1))
 
         for block in self.trans_blocks:

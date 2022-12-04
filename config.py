@@ -1,207 +1,66 @@
-from CNN import CNN
-from CNN_Trans import CNN_Trans
-from Dual_Trans import Dual_Trans
-from Mult_Conv import Mult_Conv
-from None_Trans import None_Trans
-from Spatial_Mlp import Spatial_Mlp
-from None_Mlp import None_Mlp
-from blstm import BLSTM
-from conformer import Conformer
-from lstm import LSTM
-# from lstm_Seq import LSTM_Seq
-# from resnet import ResNet
-# from resnet_MF import ResNet_Fig_MF
-# from vit import Vit
-# from vit_Seq import Vit_Seq
-from Dual_Attn import Dual_Attn
-from dualattn_Seq import DualAttn_Seq
-from MSTAN_Seq import MSTAN_Seq
-from MSTAN import MSTAN
+from Conv_Lstm import Conv_Lstm
+from Persist import Persist
+from Vision_Transformer import Vision_Transformer
+from Swin import Swin
+from Conv_3D import Conv_3D
 
-args = {
-    "ResNet":{
-        "depth":2,
-        "drop_prob":0.1
+import torch
+
+configs = {
+    "Conv_Lstm":{
+        "in_channels":1,#num_features
+        "hidden_channels":3,
+        "in2hi_kernel":3,
+        "hi2hi_kernel":3,
+        "layers_num":3,
+        "predict_steps":6
     },
-    "ResNet_Fig_MF":{
-        "feature_num":6,
-        "window_size":6,
-        "img_shape":[30,20],
-        "depth":2,
-        "drop_prob":0.2
+    "Persist":{
+        "predict_steps":6
     },
-    "Conformer":{
-        "res_depth":16,
+    "Vision_Transformer":{
         "image_shape":[30,20],
         "patch_shape":[5,5],
-        "in_channels":3,
-        "res_out_channels":16,
+        "input_steps":6,
+        "num_features":1,
+        "dim":128,
+        "head_num":32,
+        "block_num":3
+    },
+    "Swin":{
+        "epochs":100,
+        "lr":1e-3,
+        "lr_decay":[
+            [30,1]
+        ],
+        "optimizer":torch.optim.AdamW,
+        "weight_decay":0,
+        "args":{
+            "image_size":[30,20],
+            "patch_size":[2,2],
+            "input_steps":6,
+            "predict_steps":6,
+            "num_features":5,
+            "dim":32,
+            "num_heads":4,
+            "window_size":[5,5],
+            "depth":3
+        }
+
+    },
+    "Conv_3D":{
+        "input_steps":6,
+        "predict_steps":6,
+        "num_features":5,
         "dim":32,
-        "mlp_dim":64,
-        "vit_depth":24,
-        "num_heads":8,
-        "drop_prob":0.1          
-    },
-    "Vit":{
-        "img_shape":[30,20],
-        "patch_shape":[5,5],
-        "in_channels":3,
-        "dim":32,
-        "mlp_dim":64,
-        "depth":24,
-        "num_heads":8,
-        "drop_prob":0.1
-    },
-    "Vit_Seq":{
-        "feature_num":6,
-        "window_size":6,
-        "drive_num":106,
-        "dim":32,
-        "mlp_dim":64,
-        "depth":24,
-        "num_heads":8,
-        "drop_prob":0.1
-    },
-    "Dual_Attn":{
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_size":64,
-        "target_pos":[15,10]
-    },
-    "DualAttn_Seq":{
-        "feature_num":6,
-        "window_size":6,
-        "hidden_size":16,
-        "drive_num":106,
-        "target_pos":50
-    },
-    "LSTM":{
-        "feature_num":1,
-        "window_size":6,
-        "img_shape":[30,20],
-        "hidden_size":4,
-        "target_pos":[15,10]
-    },
-    "BLSTM":{
-        "feature_num":1,
-        "window_size":6,
-        "img_shape":[30,20],
-        "hidden_size":4,
-        "target_pos":[15,10]
-    },
-    "LSTM_Seq":{
-        "feature_num":6,
-        "window_size":6,
-        "drive_num":106,
-        "hidden_size":16
-    },
-    "MSTAN":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "spatial_dim":8,
-        "spatial_head":1,
-        "patch_size":[2,2],
-        "hidden_size":32,
-        "temporal_dim":32,#==hidden_size
-        "temporal_head":4,
-    },
-    "MSTAN_Seq":{
-        "feature_num":6,
-        "window_size":6,
-        "drive_num":106,
-        "hidden_size":32,
-        "head_num":8
-    },
-    "Dual_Trans":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "spatial_dim":128,
-        "spatial_head":1,
-        "patch_shape":[2,2],
-        "hidden_size":128,
-        "temporal_dim":128,#==hidden_size
-        "temporal_head":8,
-    },
-    "CNN_Trans":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_channels":16,
-        "depth":3,
-        "hidden_size":64,
-        "temporal_dim":64,
-        "temporal_head":8,
-        "trans_num":1
-    },
-    "CNN_Trans_Tiny":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_channels":16,
-        "depth":3,
-        "hidden_size":32,
-        "temporal_dim":32,
-        "temporal_head":4,
-        "trans_num":1
-    },
-    "Mult_Conv":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_neurons":16
-    },
-    "CNN":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_neurons":16
-    },
-    "Spatial_Mlp":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_channels":16,
-        "depth":3,
-        "hidden_size":64
-    },
-    "None_Trans":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_size":64,
-        "temporal_dim":64,
-        "temporal_head":8,
-        "trans_num":1
-    },
-    "None_Mlp":{
-        "feature_num":1,
-        "img_shape":[30,20],
-        "window_size":6,
-        "hidden_size":64
-    },
+        "depth":0
+    }
 }
 
 models = {
-    "Conformer":Conformer,
-    # "ResNet":ResNet,
-    # "ResNet_Fig_MF":ResNet_Fig_MF,
-    # "Vit":Vit,
-    # "Vit_Seq":Vit_Seq,
-    "Dual_Attn":Dual_Attn,
-    "DualAttn_Seq":DualAttn_Seq,
-    "LSTM":LSTM,
-    "BLSTM":BLSTM,
-    # "LSTM_Seq":LSTM_Seq,
-    "MSTAN":MSTAN,
-    "MSTAN_Seq":MSTAN_Seq,
-    "Dual_Trans":Dual_Trans,
-    "CNN_Trans":CNN_Trans,
-    "CNN_Trans_Tiny":CNN_Trans,
-    "Mult_Conv":Mult_Conv,
-    "CNN":CNN,
-    "Spatial_Mlp":Spatial_Mlp,
-    "None_Trans":None_Trans,
-    "None_Mlp":None_Mlp
+    "Conv_Lstm":Conv_Lstm,
+    "Persist":Persist,
+    "Vision_Transformer":Vision_Transformer,
+    "Swin":Swin,
+    "Conv_3D":Conv_3D
 }

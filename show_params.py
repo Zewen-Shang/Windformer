@@ -6,11 +6,11 @@ from dataset import get_dataset_img
 from thop import profile
 
 target_map = 1
-window_size = 6
+input_steps = 6
 predict_steps = 6
 season = [1,2,3,4]
 
-# dataset = get_dataset_img(target_map,[15,10],window_size,predict_steps,season,debug=False)
+# dataset = get_dataset_img(target_map,[15,10],input_steps,predict_steps,season,debug=False)
 
 # for i in range(len(dataset)):
 #     # dataset[i][0] = dataset[i][0][5:]
